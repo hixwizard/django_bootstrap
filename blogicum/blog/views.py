@@ -1,14 +1,17 @@
-from django.contrib.auth import login
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib import messages
+from django.contrib.auth import login, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserChangeForm, UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordChangeView
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
-                                  UpdateView, View)
+from django.views.generic import (
+    CreateView, DeleteView, DetailView, ListView, UpdateView, View
+)
 from django.views.generic.edit import FormView
 
 from .constants import POSTS_TO_DISPLAY
@@ -30,6 +33,20 @@ def registration_view(request):
         'registration/registration_form.html',
         {'form': form}
     )
+
+
+@login_required
+def edit_profile(request):
+    if request.method == 'POST':
+        form = UserChangeForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, form.user)
+            messages.success(request, 'Your profile was successfully updated!')
+            return redirect('blog:user_profile')
+    else:
+        form = UserChangeForm(instance=request.user)
+    return render(request, 'blog/edit_profile.html', {'form': form})
 
 
 class IndexView(ListView):
@@ -109,6 +126,12 @@ class CreatePostView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.author = self.request.user
         return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse(
+            'blog:user_profile',
+            kwargs={'username': self.request.user.username}
+        )
 
 
 class EditPostView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):

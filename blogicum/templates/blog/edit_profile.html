@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+{% block content %}
+  <div class="container">
+    <h1 class="mt-5 mb-4">Редактирование профиля</h1>
+    <div class="row">
+      <div class="col-md-6 offset-md-3">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          {{ form.non_field_errors }}
+          <div class="mb-3">
+            <label for="id_first_name" class="form-label">Имя</label>
+            <input type="text" name="first_name" id="id_first_name" class="form-control" value="{{ user.first_name }}">
+          </div>
+          <div class="mb-3">
+            <label for="id_last_name" class="form-label">Фамилия</label>
+            <input type="text" name="last_name" id="id_last_name" class="form-control" value="{{ user.last_name }}">
+          </div>
+          <div class="mb-3">
+            <label for="id_image" class="form-label">Фотография</label>
+            <input type="file" name="image" id="id_image" class="form-control">
+          </div>
+          <button type="submit" class="btn btn-primary mt-3">Сохранить</button>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

@@ -50,4 +50,9 @@ urlpatterns = [
         views.UserProfileView.as_view(),
         name='profile'
     ),
+    path(
+        'edit_profile/',
+        views.edit_profile,
+        name='edit_profile'
+    ),
 ]

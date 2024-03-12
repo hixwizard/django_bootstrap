@@ -12,16 +12,16 @@ class YourRegistrationForm(UserCreationForm):
         fields = ['username', 'password1', 'password2']
 
 
-class YourPostForm(forms.ModelForm):
-    class Meta:
-        model = Post
-        fields = [
-            'title', 'text', 'pub_date',
-            'location', 'category', 'image'
-        ]
-
-
 class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ['text']
+
+
+class YourPostForm(forms.ModelForm):
+    class Meta:
+        model = Post
+        fields = ['title', 'text', 'pub_date', 'location', 'category', 'image']
+        widgets = {
+            'pub_date': forms.DateTimeInput(attrs={'type': 'datetime-local'})
+        }

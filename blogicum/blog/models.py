@@ -1,31 +1,9 @@
 from core.constants import MAX_CHARACTERS
 from core.models import CreatedAtModel, PublishedModel
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
 from django.db import models
-from django.shortcuts import redirect, render
-
-from .forms import PostForm
 
 User = get_user_model()
-
-
-@login_required
-def create_post(request):
-    if request.method == 'POST':
-        form = PostForm(request.POST, request.FILES)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            return redirect(
-                'blog:user_profile',
-                username=request.user.username
-            )
-    else:
-        form = PostForm()
-
-    return render(request, 'blog/create_post.html', {'form': form})
 
 
 class Post(CreatedAtModel, PublishedModel):
