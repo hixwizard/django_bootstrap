@@ -1,4 +1,5 @@
-from django.contrib import messages
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.models import User
 from django.contrib.auth.views import PasswordChangeView
@@ -6,17 +7,13 @@ from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
-from django.views.generic import (
-    CreateView, DeleteView, DetailView, ListView, UpdateView, View
-)
+from django.views.generic import (CreateView, DeleteView, DetailView, ListView,
+                                  UpdateView, View)
 from django.views.generic.edit import FormView
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login
 
+from .constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, YourPostForm, YourRegistrationForm
 from .models import Category, Comment, Post
-
-POSTS_TO_DISPLAY = 10
 
 
 def registration_view(request):
@@ -25,10 +22,14 @@ def registration_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('blog:index')  # Или куда-то еще, куда вы хотите перенаправить после регистрации
+            return redirect('blog:index')
     else:
         form = UserCreationForm()
-    return render(request, 'registration/registration_form.html', {'form': form})
+    return render(
+        request,
+        'registration/registration_form.html',
+        {'form': form}
+    )
 
 
 class IndexView(ListView):
@@ -136,16 +137,16 @@ class DeletePostView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 class YourRegistrationView(FormView):
     template_name = 'registration/registration_form.html'
     form_class = UserCreationForm
-    success_url = reverse_lazy('login')  # Перенаправление на страницу входа после успешной регистрации
+    success_url = reverse_lazy('login')
 
     def form_valid(self, form):
         # Сохранение нового пользователя
         form.save()
-        
+
         # Автоматический вход нового пользователя
         user = form.instance
         login(self.request, user)
-        
+
         # После успешной регистрации перенаправляем на страницу входа
         return super().form_valid(form)
 

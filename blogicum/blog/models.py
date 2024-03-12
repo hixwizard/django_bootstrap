@@ -1,9 +1,11 @@
-from django.contrib.auth import get_user_model
-from django.db import models
-from core.models import CreatedAtModel, PublishedModel
-from django.contrib.auth.decorators import login_required
-
 from core.constants import MAX_CHARACTERS
+from core.models import CreatedAtModel, PublishedModel
+from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
+from django.db import models
+from django.shortcuts import redirect, render
+
+from .forms import PostForm
 
 User = get_user_model()
 
@@ -16,7 +18,10 @@ def create_post(request):
             post = form.save(commit=False)
             post.author = request.user
             post.save()
-            return redirect('blog:user_profile', username=request.user.username)
+            return redirect(
+                'blog:user_profile',
+                username=request.user.username
+            )
     else:
         form = PostForm()
 
@@ -119,7 +124,11 @@ class Location(CreatedAtModel, PublishedModel):
 
 
 class Comment(CreatedAtModel):
-    post = models.ForeignKey('Post', on_delete=models.CASCADE, related_name='comments')
+    post = models.ForeignKey(
+        'Post',
+        on_delete=models.CASCADE,
+        related_name='comments'
+    )
     author = models.ForeignKey(User, on_delete=models.CASCADE)
     text = models.TextField()
 

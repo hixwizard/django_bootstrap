@@ -1,16 +1,15 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
-from django import forms
-from .models import Post
-from .models import Comment
+
+from .models import Comment, Post
+
 
 class YourRegistrationForm(UserCreationForm):
-    # Если у вас есть дополнительные поля для регистрации, добавьте их здесь
 
     class Meta:
         model = User
-        fields = ['username', 'password1', 'password2']  # Это минимальный набор полей для регистрации
+        fields = ['username', 'password1', 'password2']
 
 
 class YourPostForm(forms.ModelForm):
