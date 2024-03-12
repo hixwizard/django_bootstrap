@@ -1,0 +1,1 @@
+POSTS_TO_DISPLAY: int = 5
