@@ -10,13 +10,6 @@ class PublishedModel(models.Model):
         help_text='Снимите галочку, чтобы скрыть публикацию.'
     )
 
-    class Meta:
-        abstract = True
-
-
-class CreatedAtModel(models.Model):
-    """Абстрактная модель. Добвляет штамп даты."""
-
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Добавлено'

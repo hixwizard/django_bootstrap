@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from .models import Comment, Post
 
 
-class YourRegistrationForm(UserCreationForm):
+class UserEditForm(UserCreationForm):
 
     class Meta:
         model = User
@@ -18,10 +18,15 @@ class CommentForm(forms.ModelForm):
         fields = ['text']
 
 
-class YourPostForm(forms.ModelForm):
+class PostForm(forms.ModelForm):
+
     class Meta:
         model = Post
-        fields = ['title', 'text', 'pub_date', 'location', 'category', 'image']
+        exclude = ('author',)
         widgets = {
-            'pub_date': forms.DateTimeInput(attrs={'type': 'datetime-local'})
+            'text': forms.Textarea(),
+            'comment': forms.Textarea(),
+            'pub_date': forms.DateTimeInput(
+                format="%Y-%m-%d %H:%M:%S",
+                attrs={'type': 'datetime-local'}),
         }

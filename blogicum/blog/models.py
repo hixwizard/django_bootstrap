@@ -1,12 +1,14 @@
-from core.constants import MAX_CHARACTERS
-from core.models import CreatedAtModel, PublishedModel
 from django.contrib.auth import get_user_model
 from django.db import models
+
+from core.constants import MAX_CHARACTERS
+from core.models import PublishedModel
+
 
 User = get_user_model()
 
 
-class Post(CreatedAtModel, PublishedModel):
+class Post(PublishedModel):
     """Определяет свойства поста."""
 
     title = models.CharField(
@@ -43,11 +45,7 @@ class Post(CreatedAtModel, PublishedModel):
         verbose_name='Категория',
         related_name='posts'
     )
-    image = models.ImageField(
-        upload_to='post_images/',
-        blank=True,
-        null=True
-    )
+    image = models.ImageField(blank=True)
 
     class Meta:
         """Дополнительные параметры для перевода."""
@@ -60,7 +58,7 @@ class Post(CreatedAtModel, PublishedModel):
         return self.title
 
 
-class Category(CreatedAtModel, PublishedModel):
+class Category(PublishedModel):
     """Определяет свойства категорий."""
 
     title = models.CharField(
@@ -85,7 +83,7 @@ class Category(CreatedAtModel, PublishedModel):
         return self.title
 
 
-class Location(CreatedAtModel, PublishedModel):
+class Location(PublishedModel):
     """Определяет свойства местоположения."""
 
     name = models.CharField(
@@ -101,17 +99,24 @@ class Location(CreatedAtModel, PublishedModel):
         return self.name
 
 
-class Comment(CreatedAtModel):
+class Comment(PublishedModel):
+    text = models.TextField(verbose_name='Текст комментария',)
     post = models.ForeignKey(
-        'Post',
+        Post,
         on_delete=models.CASCADE,
-        related_name='comments'
     )
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    text = models.TextField()
+    author = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name='Автор комментария',
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Добавлено'
+    )
 
     class Meta:
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f'От {self.author} для {self.post}'
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        default_related_name = 'comments'
+        ordering = ('created_at',)
