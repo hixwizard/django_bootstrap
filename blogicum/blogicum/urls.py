@@ -12,7 +12,7 @@ urlpatterns = [
     path('pages/', include('pages.urls')),
     path('', include('django.contrib.auth.urls')),
     path(
-        'registration/',
+        'auth/registration/',
         CreateView.as_view(
             template_name='registration/registration_form.html',
             form_class=UserCreationForm,

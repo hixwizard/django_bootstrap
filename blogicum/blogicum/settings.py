@@ -89,13 +89,13 @@ USE_L10N = True
 
 USE_TZ = True
 
+TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
+
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
-
-TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 
 MEDIA_ROOT = BASE_DIR / 'media/'
 MEDIA_URL = '/media/'

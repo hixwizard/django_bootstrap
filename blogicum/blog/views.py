@@ -104,8 +104,8 @@ def category_detail(request, slug):
 
     context = {
         'category': category,
-        'post_list': posts,  # Передаем список публикаций текущей страницы
-        'comment_form': comment_form,  # Передаем форму комментария в контекст
+        'post_list': posts,
+        'comment_form': comment_form,
     }
 
     return render(request, template, context)
