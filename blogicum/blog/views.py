@@ -126,19 +126,14 @@ def post_detail(request, post_id) -> HttpResponse:
         )
     )
 
-    # Проверка, что пользователь имеет доступ к просмотру страницы поста
     if not request.user.is_authenticated:
-        # Если пользователь не аутентифицирован, он не имеет доступа к странице поста
+
         raise Http404("Страница поста недоступна.")
 
     if request.user == post.author:
-        # Если пользователь - автор поста, он имеет доступ к странице поста независимо от статуса публикации
         pass
     elif not post.is_published:
-        # Если пост не опубликован и текущий пользователь не является автором поста, страница недоступна
         raise Http404("Страница поста недоступна.")
-
-    # В данной точке мы убедились, что пользователь аутентифицирован и имеет доступ к просмотру страницы поста
 
     context = {
         'post': post,
@@ -166,18 +161,21 @@ class EditPostView(LoginRequiredMixin, UpdateView):
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
-    login_url = reverse_lazy('login')  # Указываем URL для перенаправления в случае отсутствия аутентификации
+    login_url = reverse_lazy('login')
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:  # Проверяем, аутентифицирован ли пользователь
-            return redirect_to_login(  # Если не аутентифицирован, перенаправляем на страницу входа
-                request.get_full_path(),  # Передаем текущий URL для перенаправления после аутентификации
-                self.get_login_url(),  # Получаем URL для страницы входа
-                self.get_redirect_field_name()  # Получаем имя параметра для перенаправления после аутентификации
+        if not request.user.is_authenticated:
+            return redirect_to_login(
+                request.get_full_path(),
+                self.get_login_url(),
+                self.get_redirect_field_name()
             )
         post = self.get_object()
         if post.author != request.user:
-            return redirect('blog:post_detail', post_id=self.kwargs[self.pk_url_kwarg])
+            return redirect(
+                'blog:post_detail',
+                post_id=self.kwargs[self.pk_url_kwarg]
+            )
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
