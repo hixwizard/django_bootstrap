@@ -5,6 +5,7 @@ from django.urls import reverse_lazy
 from django.contrib.auth.forms import UserCreationForm
 from django.views.generic import CreateView
 from django.conf.urls.static import static
+from django.contrib.auth import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -20,7 +21,11 @@ urlpatterns = [
         ),
         name='registration',
     ),
-
+    path(
+        'auth/password_change/',
+        views.PasswordChangeView.as_view(),
+        name='password_change'
+    ),
 ]
 
 handler403 = 'pages.views.csrf_failure'
