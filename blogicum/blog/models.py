@@ -55,7 +55,7 @@ class Post(PublishedModel):
 
     def __str__(self) -> str:
         """Параметр для отображения названия."""
-        return self.title
+        return self.title[:15]
 
 
 class Category(PublishedModel):
