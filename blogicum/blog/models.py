@@ -45,7 +45,10 @@ class Post(PublishedModel):
         verbose_name='Категория',
         related_name='posts'
     )
-    image = models.ImageField(blank=True)
+    image = models.ImageField(
+        blank=True,
+        verbose_name='Изображение'
+    )
 
     class Meta:
         """Дополнительные параметры для перевода."""

@@ -86,7 +86,7 @@ def category_detail(request, slug):
     ).select_related(
         'author',
         'location',
-        'category'
+        'category',
     )
 
     paginator = Paginator(post_list, POSTS_TO_DISPLAY)
@@ -104,7 +104,7 @@ def category_detail(request, slug):
 
     context = {
         'category': category,
-        'post_list': posts,
+        'page_obj': posts,
         'comment_form': comment_form,
     }
 
