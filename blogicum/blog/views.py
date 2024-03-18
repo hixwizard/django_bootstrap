@@ -1,23 +1,19 @@
-from django.http import HttpResponse, Http404
-from django.shortcuts import get_object_or_404, render
-from django.utils import timezone
-from django.urls import reverse_lazy, reverse
-from django.utils.timezone import now
-from django.views.generic import DeleteView, UpdateView, ListView
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import redirect_to_login
-
-from .constants import POSTS_TO_DISPLAY
-from .models import Category, Post, Comment
-from .forms import PostForm, UserEditForm, CommentForm
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-
-from django.shortcuts import get_object_or_404, redirect
-from .models import Post
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.db.models import Count
+from django.http import HttpResponse, Http404, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy, reverse
+from django.utils import timezone
+from django.utils.timezone import now
+from django.views.generic import DeleteView, UpdateView, ListView
+
+from .constants import POSTS_TO_DISPLAY
+from .forms import CommentForm, PostForm, UserEditForm
+from .models import Category, Comment, Post
 
 
 class ProfileView(ListView):
@@ -65,7 +61,6 @@ def index(request) -> HttpResponse:
     ).annotate(comment_count=Count('comments')).order_by(
         '-pub_date'
     )[:POSTS_TO_DISPLAY]
-
     context = {
         'page_obj': page_obj,
     }
@@ -113,12 +108,9 @@ def category_detail(request, slug) -> HttpResponse:
 def post_detail(request, post_id) -> HttpResponse:
     """Отображение подробной информации о посте."""
     template = 'blog/detail.html'
-
-    # Получение объекта поста или вызов HTTP 404, если его не существует
     post = get_object_or_404(
         Post.objects.filter(
-            pk=post_id,
-            pub_date__lte=timezone.now(),  # Пост должен быть опубликован
+            pk=post_id
         ).select_related(
             'author',
             'location',
@@ -127,13 +119,15 @@ def post_detail(request, post_id) -> HttpResponse:
     )
 
     if not request.user.is_authenticated:
-
         raise Http404("Страница поста недоступна.")
 
     if request.user == post.author:
         pass
     elif not post.is_published:
         raise Http404("Страница поста недоступна.")
+    elif post.pub_date > timezone.now():
+        if request.user != post.author:
+            raise Http404("Страница поста недоступна.")
 
     context = {
         'post': post,
@@ -145,7 +139,7 @@ def post_detail(request, post_id) -> HttpResponse:
 
 
 @login_required
-def post_create(request):
+def post_create(request) -> HttpResponse:
     template_name = 'blog/create.html'
     form = PostForm(request.POST or None, files=request.FILES or None)
     if form.is_valid():
@@ -161,20 +155,14 @@ class EditPostView(LoginRequiredMixin, UpdateView):
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
-    login_url = reverse_lazy('login')
 
     def dispatch(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect_to_login(
-                request.get_full_path(),
-                self.get_login_url(),
-                self.get_redirect_field_name()
-            )
         post = self.get_object()
-        if post.author != request.user:
-            return redirect(
-                'blog:post_detail',
-                post_id=self.kwargs[self.pk_url_kwarg]
+        if not request.user.is_authenticated:
+            return HttpResponseRedirect(reverse_lazy(settings.URL_LOGIN))
+        elif post.author != request.user:
+            return HttpResponseRedirect(
+                reverse('blog:post_detail', kwargs={'post_id': post.id})
             )
         return super().dispatch(request, *args, **kwargs)
 
@@ -220,7 +208,7 @@ class ProfiletUpdateView(LoginRequiredMixin, UpdateView):
 
 
 @login_required
-def add_comment(request, post_id):
+def add_comment(request, post_id) -> HttpResponse:
     comment = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST)
     if form.is_valid():

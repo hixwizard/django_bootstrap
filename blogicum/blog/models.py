@@ -103,6 +103,8 @@ class Location(PublishedModel):
 
 
 class Comment(PublishedModel):
+    """Определяет свойства комментария."""
+
     text = models.TextField(verbose_name='Текст комментария',)
     post = models.ForeignKey(
         Post,

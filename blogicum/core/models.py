@@ -2,7 +2,7 @@ from django.db import models
 
 
 class PublishedModel(models.Model):
-    """Абстрактная модель. Добвляет флаг is_published."""
+    """Абстрактная модель, добвляет флаг is_published и поле "Добавлено"."""
 
     is_published = models.BooleanField(
         default=True,
