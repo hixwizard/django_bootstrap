@@ -87,7 +87,7 @@ def category_detail(request, slug):
         'author',
         'location',
         'category',
-    )
+    ).order_by('-pub_date')
 
     paginator = Paginator(post_list, POSTS_TO_DISPLAY)
 
