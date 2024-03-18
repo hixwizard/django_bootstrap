@@ -1,11 +1,11 @@
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404, render
 from django.utils import timezone
 from django.urls import reverse_lazy, reverse
 from django.utils.timezone import now
 from django.views.generic import DeleteView, UpdateView, ListView
-
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 
 from .constants import POSTS_TO_DISPLAY
 from .models import Category, Post, Comment
@@ -73,7 +73,7 @@ def index(request) -> HttpResponse:
     return render(request, template, context)
 
 
-def category_detail(request, slug):
+def category_detail(request, slug) -> HttpResponse:
     """Отображение страницы с информацией о категории."""
     template = 'blog/category.html'
 
@@ -99,7 +99,6 @@ def category_detail(request, slug):
     except EmptyPage:
         posts = paginator.page(paginator.num_pages)
 
-    # Создаем экземпляр формы комментария
     comment_form = CommentForm()
 
     context = {
@@ -115,12 +114,11 @@ def post_detail(request, post_id) -> HttpResponse:
     """Отображение подробной информации о посте."""
     template = 'blog/detail.html'
 
-    post_list = get_object_or_404(
+    # Получение объекта поста или вызов HTTP 404, если его не существует
+    post = get_object_or_404(
         Post.objects.filter(
             pk=post_id,
-            is_published=True,
-            category__is_published=True,
-            pub_date__lte=timezone.now()
+            pub_date__lte=timezone.now(),  # Пост должен быть опубликован
         ).select_related(
             'author',
             'location',
@@ -128,10 +126,24 @@ def post_detail(request, post_id) -> HttpResponse:
         )
     )
 
+    # Проверка, что пользователь имеет доступ к просмотру страницы поста
+    if not request.user.is_authenticated:
+        # Если пользователь не аутентифицирован, он не имеет доступа к странице поста
+        raise Http404("Страница поста недоступна.")
+
+    if request.user == post.author:
+        # Если пользователь - автор поста, он имеет доступ к странице поста независимо от статуса публикации
+        pass
+    elif not post.is_published:
+        # Если пост не опубликован и текущий пользователь не является автором поста, страница недоступна
+        raise Http404("Страница поста недоступна.")
+
+    # В данной точке мы убедились, что пользователь аутентифицирован и имеет доступ к просмотру страницы поста
+
     context = {
-        'post': post_list,
+        'post': post,
         'form': CommentForm(),
-        'comments': post_list.comments.select_related('author'),
+        'comments': post.comments.select_related('author'),
     }
 
     return render(request, template, context)
@@ -154,14 +166,18 @@ class EditPostView(LoginRequiredMixin, UpdateView):
     pk_url_kwarg = 'post_id'
     form_class = PostForm
     template_name = 'blog/create.html'
+    login_url = reverse_lazy('login')  # Указываем URL для перенаправления в случае отсутствия аутентификации
 
     def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if post.author != self.request.user:
-            return redirect(
-                'blog:post_detail',
-                post_id=self.kwargs[self.pk_url_kwarg]
+        if not request.user.is_authenticated:  # Проверяем, аутентифицирован ли пользователь
+            return redirect_to_login(  # Если не аутентифицирован, перенаправляем на страницу входа
+                request.get_full_path(),  # Передаем текущий URL для перенаправления после аутентификации
+                self.get_login_url(),  # Получаем URL для страницы входа
+                self.get_redirect_field_name()  # Получаем имя параметра для перенаправления после аутентификации
             )
+        post = self.get_object()
+        if post.author != request.user:
+            return redirect('blog:post_detail', post_id=self.kwargs[self.pk_url_kwarg])
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
