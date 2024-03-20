@@ -11,9 +11,10 @@ from django.utils import timezone
 from django.utils.timezone import now
 from django.views.generic import DeleteView, UpdateView, ListView
 
-from .constants import POSTS_TO_DISPLAY
+from core.constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, PostForm, UserEditForm
-from .models import Category, Comment, Post
+from .models import Category, Post
+from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
 
 
 class ProfileView(ListView):
@@ -63,6 +64,9 @@ def index(request) -> HttpResponse:
     context = {
         'page_obj': page_obj,
     }
+    paginator = Paginator(page_obj, POSTS_TO_DISPLAY)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.page(page_number)
 
     return render(request, template, context)
 
@@ -85,13 +89,7 @@ def category_detail(request, slug) -> HttpResponse:
 
     paginator = Paginator(post_list, POSTS_TO_DISPLAY)
 
-    page = request.GET.get('page')
-    try:
-        posts = paginator.page(page)
-    except PageNotAnInteger:
-        posts = paginator.page(1)
-    except EmptyPage:
-        posts = paginator.page(paginator.num_pages)
+    posts = paginator.page(paginator.num_pages)
 
     comment_form = CommentForm()
 
@@ -149,7 +147,7 @@ def post_create(request) -> HttpResponse:
     return render(request, template_name, context={'form': form})
 
 
-class EditPostView(LoginRequiredMixin, UpdateView):
+class EditPostView(PostFormMixin, UpdateView):
     model = Post
     pk_url_kwarg = 'post_id'
     form_class = PostForm
@@ -159,7 +157,7 @@ class EditPostView(LoginRequiredMixin, UpdateView):
         post = self.get_object()
         if not request.user.is_authenticated:
             return HttpResponseRedirect(reverse_lazy(settings.URL_LOGIN))
-        elif post.author != request.user:
+        if post.author != request.user:
             return HttpResponseRedirect(
                 reverse('blog:post_detail', kwargs={'post_id': post.id})
             )
@@ -172,21 +170,8 @@ class EditPostView(LoginRequiredMixin, UpdateView):
         )
 
 
-class DeletePostView(LoginRequiredMixin, DeleteView):
-    model = Post
-    pk_url_kwarg = 'post_id'
-    template_name = 'blog/create.html'
+class DeletePostView(PostFormMixin, DeleteView):
     success_url = reverse_lazy('blog:index')
-
-    def dispatch(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=kwargs.get('post_id'))
-        if post.author != request.user:
-            return redirect('blog:post_detail', self.kwargs.get('post_id'))
-        return super().dispatch(request, *args, **kwargs)
-
-    def context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['form'] = PostForm
 
 
 class ProfiletUpdateView(LoginRequiredMixin, UpdateView):
@@ -218,54 +203,12 @@ def add_comment(request, post_id) -> HttpResponse:
     return redirect('blog:post_detail', post_id=post_id)
 
 
-class CommentMixin:
-    model = Comment
-    form_class = CommentForm
-    template_name = 'blog/comment.html'
-    pk_url_kwarg = 'comment_id'
-    comment = None
-
-    def dispatch(self, request, *args, **kwargs):
-        instance = get_object_or_404(
-            Comment, pk=kwargs.get(
-                'comment_id',
-                'post_id'
-            )
-        )
-        if instance.author != request.user:
-            return redirect('blog:post_detail', self.kwargs.get('post_id'))
-        return super().dispatch(request, *args, **kwargs)
-
-    def form_valid(self, form):
-        form.instance.author = self.request.user
-        form.instance.comment = self.comment
-        return super().form_valid(form)
-
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.kwargs.get('post_id')})
-
-
 class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
     pass
 
 
 class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
     pass
-
-
-class CommonPostMixin:
-    model = Post
-    template_name = 'blog/create.html'
-    pk_url_kwarg = 'post_id'
-    form_class = UserEditForm
-    posts = None
-
-    def dispatch(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=kwargs.get('post_id'))
-        if post.author != request.user:
-            return redirect('blog:post_detail', self.kwargs.get('post_id'))
-        return super().dispatch(request, *args, **kwargs)
 
 
 class PostUpdateView(CommonPostMixin, LoginRequiredMixin, UpdateView):
