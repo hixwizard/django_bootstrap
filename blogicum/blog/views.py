@@ -1,20 +1,19 @@
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.http import HttpResponse, Http404, HttpResponseRedirect
+from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
-from django.utils.timezone import now
 from django.views.generic import DeleteView, UpdateView, ListView
 
 from core.constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, PostForm, UserEditForm
 from .models import Category, Post
 from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
+from .querysets import get_annotated_posts, filter_published_posts
 
 
 class ProfileView(ListView):
@@ -22,27 +21,27 @@ class ProfileView(ListView):
     template_name = 'blog/profile.html'
     context_object_name = 'profile'
     paginate_by = POSTS_TO_DISPLAY
+    author = None
+
+    def get_author(self):
+        if not self.author:
+            self.author = get_object_or_404(
+                User,
+                username=self.kwargs['username']
+            )
+        return self.author
 
     def get_queryset(self):
-        author = get_object_or_404(User, username=self.kwargs['username'])
-        posts = author.posts.annotate(
-            comment_count=Count('comments')
-        ).order_by(
-            '-pub_date').select_related('category', 'author', 'location')
-        if author != self.request.user:
-            posts = posts.filter(
-                is_published=True,
-                category__is_published=True,
-                pub_date__lte=now()
-            )
-        return posts
+        author = self.get_author()
+        posts = get_annotated_posts(author)
+        filtered_posts = filter_published_posts(
+            posts, author, self.request.user
+        )
+        return filtered_posts
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile'] = get_object_or_404(
-            User,
-            username=self.kwargs['username']
-        )
+        context['profile'] = self.get_author()
         return context
 
 
