@@ -11,9 +11,11 @@ from django.views.generic import DeleteView, UpdateView, ListView
 
 from core.constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, PostForm, UserEditForm
-from .models import Category, Post
+from .models import Post
 from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
-from .querysets import get_annotated_posts, filter_published_posts
+from .querysets import (
+    get_annotated_posts, filter_published_posts, get_posts_in_category
+)
 
 
 class ProfileView(ListView):
@@ -74,22 +76,7 @@ def category_detail(request, slug) -> HttpResponse:
     """Отображение страницы с информацией о категории."""
     template = 'blog/category.html'
 
-    category = get_object_or_404(Category, slug=slug, is_published=True)
-
-    post_list = Post.objects.filter(
-        category=category,
-        pub_date__lte=timezone.now(),
-        is_published=True
-    ).select_related(
-        'author',
-        'location',
-        'category',
-    ).order_by('-pub_date')
-
-    paginator = Paginator(post_list, POSTS_TO_DISPLAY)
-
-    posts = paginator.page(paginator.num_pages)
-
+    posts, category = get_posts_in_category(slug)
     comment_form = CommentForm()
 
     context = {
