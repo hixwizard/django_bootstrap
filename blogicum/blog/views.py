@@ -20,7 +20,7 @@ class ProfileView(ListView):
     model = User
     template_name = 'blog/profile.html'
     context_object_name = 'profile'
-    paginate_by = 10
+    paginate_by = POSTS_TO_DISPLAY
 
     def get_queryset(self):
         author = get_object_or_404(User, username=self.kwargs['username'])
@@ -50,7 +50,6 @@ def index(request) -> HttpResponse:
     template = 'blog/index.html'
 
     page_obj = Post.objects.filter(
-        # comment_count = Count('comments'),
         pub_date__lte=timezone.now(),
         is_published=True,
         category__is_published=True

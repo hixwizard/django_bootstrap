@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from core.constants import MAX_CHARACTERS
+from core.constants import MAX_CHARACTERS, MAX_TITLE_LENGTH
 from core.models import PublishedModel
 
 
@@ -57,8 +57,7 @@ class Post(PublishedModel):
         verbose_name_plural: str = 'Публикации'
 
     def __str__(self) -> str:
-        """Параметр для отображения названия."""
-        return self.title[:15]
+        return self.title[:MAX_TITLE_LENGTH]
 
 
 class Category(PublishedModel):
