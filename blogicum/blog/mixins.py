@@ -1,8 +1,8 @@
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse_lazy
 
+from .forms import CommentForm, PostForm, UserEditForm
 from .models import Post, Comment
-from .forms import PostForm, CommentForm, UserEditForm
 
 
 class PostFormMixin:

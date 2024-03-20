@@ -2,8 +2,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
-from django.db.models import Count
-from django.http import HttpResponse, Http404
+from django.db.models import Count, Q
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
@@ -88,26 +88,21 @@ def category_detail(request, slug) -> HttpResponse:
     return render(request, template, context)
 
 
+@login_required
 def post_detail(request, post_id) -> HttpResponse:
     """Отображение подробной информации о посте."""
     template = 'blog/detail.html'
     post = get_object_or_404(
         Post.objects.filter(
-            pk=post_id,
+            Q(pk=post_id),
+            Q(is_published=True) | Q(author=request.user, is_published=False),
+            (Q(pub_date__lte=timezone.now()) | Q(author=request.user))
         ).select_related(
             'author',
             'location',
             'category'
         )
     )
-
-    if request.user == post.author:
-        pass
-    elif not post.is_published:
-        raise Http404("Страница поста недоступна.")
-    elif post.pub_date > timezone.now():
-        if request.user != post.author:
-            raise Http404("Страница поста недоступна.")
 
     context = {
         'post': post,
@@ -119,7 +114,7 @@ def post_detail(request, post_id) -> HttpResponse:
 
 
 @login_required
-def post_create(request) -> HttpResponse:
+def post_create(request):
     template_name = 'blog/create.html'
     form = PostForm(request.POST or None, files=request.FILES or None)
     if form.is_valid():
@@ -130,7 +125,7 @@ def post_create(request) -> HttpResponse:
     return render(request, template_name, context={'form': form})
 
 
-class EditPostView(PostFormMixin, UpdateView):
+class EditPostView(PostFormMixin, LoginRequiredMixin, UpdateView):
     pk_url_kwarg = 'post_id'
 
     def get_success_url(self):
@@ -138,6 +133,11 @@ class EditPostView(PostFormMixin, UpdateView):
             'blog:post_detail',
             kwargs={'post_id': self.kwargs[self.pk_url_kwarg]}
         )
+
+    def dispatch(self, request, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            return redirect(reverse_lazy('registration'))
+        return super().dispatch(request, *args, **kwargs)
 
 
 class DeletePostView(PostFormMixin, DeleteView):

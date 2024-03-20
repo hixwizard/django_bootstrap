@@ -1,10 +1,11 @@
-from django.db.models import Count
-from django.utils.timezone import now
-from .models import Post, Category
-from django.shortcuts import get_object_or_404
 from django.core.paginator import Paginator
-from core.constants import POSTS_TO_DISPLAY
+from django.db.models import Count
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.timezone import now
+
+from .models import Post, Category
+from core.constants import POSTS_TO_DISPLAY
 
 
 def get_posts_in_category(slug):
