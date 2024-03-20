@@ -2,7 +2,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.paginator import Paginator
 from django.db.models import Count
 from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404, redirect, render
@@ -107,16 +107,13 @@ def post_detail(request, post_id) -> HttpResponse:
     template = 'blog/detail.html'
     post = get_object_or_404(
         Post.objects.filter(
-            pk=post_id
+            pk=post_id,
         ).select_related(
             'author',
             'location',
             'category'
         )
     )
-
-    if not request.user.is_authenticated:
-        raise Http404("Страница поста недоступна.")
 
     if request.user == post.author:
         pass
@@ -148,20 +145,7 @@ def post_create(request) -> HttpResponse:
 
 
 class EditPostView(PostFormMixin, UpdateView):
-    model = Post
     pk_url_kwarg = 'post_id'
-    form_class = PostForm
-    template_name = 'blog/create.html'
-
-    def dispatch(self, request, *args, **kwargs):
-        post = self.get_object()
-        if not request.user.is_authenticated:
-            return HttpResponseRedirect(reverse_lazy(settings.URL_LOGIN))
-        if post.author != request.user:
-            return HttpResponseRedirect(
-                reverse('blog:post_detail', kwargs={'post_id': post.id})
-            )
-        return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
         return reverse(
