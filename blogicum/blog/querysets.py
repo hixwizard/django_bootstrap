@@ -1,6 +1,5 @@
 from django.core.paginator import Paginator
 from django.db.models import Count
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.timezone import now
 
@@ -22,17 +21,15 @@ def filter_posts_by_category(queryset, category_slug):
     ).order_by('-pub_date')
 
 
-def get_annotated_posts(author):
-    return author.posts.annotate(
+def get_annotated_posts(queryset):
+    return queryset.posts.annotate(
         comment_count=Count('comments')
     ).order_by('-pub_date').select_related('category', 'author', 'location')
 
 
-def filter_published_posts(posts, author, request_user):
-    if author != request_user:
-        return posts.filter(
-            is_published=True,
-            category__is_published=True,
-            pub_date__lte=now()
-        )
-    return posts
+def filter_published_posts(queryset):
+    return queryset.filter(
+        is_published=True,
+        category__is_published=True,
+        pub_date__lte=now()
+    )

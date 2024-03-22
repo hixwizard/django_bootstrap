@@ -36,10 +36,9 @@ class ProfileView(ListView):
     def get_queryset(self):
         author = self.get_author()
         posts = get_annotated_posts(author)
-        filtered_posts = filter_published_posts(
-            posts, author, self.request.user
-        )
-        return filtered_posts
+        if author != self.request.user:
+            posts = filter_published_posts(posts)
+        return posts
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
