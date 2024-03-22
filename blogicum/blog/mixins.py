@@ -13,6 +13,9 @@ class PostFormMixin:
     posts = None
 
     def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect(reverse_lazy('registration'))
+
         post = get_object_or_404(Post, pk=kwargs.get('post_id'))
         if post.author != request.user:
             return redirect('blog:post_detail', self.kwargs.get('post_id'))
@@ -27,13 +30,13 @@ class CommentMixin:
     comment = None
 
     def dispatch(self, request, *args, **kwargs):
-        instance = get_object_or_404(
+        comment = get_object_or_404(
             Comment, pk=kwargs.get(
                 'comment_id',
                 'post_id'
             )
         )
-        if instance.author != request.user:
+        if comment.author != request.user:
             return redirect('blog:post_detail', self.kwargs.get('post_id'))
         return super().dispatch(request, *args, **kwargs)
 
@@ -52,10 +55,9 @@ class CommonPostMixin:
     template_name = 'blog/create.html'
     pk_url_kwarg = 'post_id'
     form_class = UserEditForm
-    posts = None
 
     def dispatch(self, request, *args, **kwargs):
-        post = get_object_or_404(Post, pk=kwargs.get('post_id'))
-        if post.author != request.user:
+        instance = get_object_or_404(Post, pk=kwargs.get('post_id'))
+        if instance.author != request.user:
             return redirect('blog:post_detail', self.kwargs.get('post_id'))
         return super().dispatch(request, *args, **kwargs)

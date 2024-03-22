@@ -95,8 +95,8 @@ def post_detail(request, post_id) -> HttpResponse:
     post = get_object_or_404(
         Post.objects.filter(
             Q(pk=post_id),
-            Q(is_published=True) | Q(author=request.user, is_published=False),
-            (Q(pub_date__lte=timezone.now()) | Q(author=request.user))
+            (Q(is_published=True, pub_date__lte=timezone.now())
+             | Q(author=request.user))
         ).select_related(
             'author',
             'location',
@@ -133,11 +133,6 @@ class EditPostView(PostFormMixin, LoginRequiredMixin, UpdateView):
             'blog:post_detail',
             kwargs={'post_id': self.kwargs[self.pk_url_kwarg]}
         )
-
-    def dispatch(self, request, *args, **kwargs):
-        if not self.request.user.is_authenticated:
-            return redirect(reverse_lazy('registration'))
-        return super().dispatch(request, *args, **kwargs)
 
 
 class DeletePostView(PostFormMixin, DeleteView):
@@ -179,13 +174,6 @@ class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
 
 class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
     pass
-
-
-class PostUpdateView(CommonPostMixin, LoginRequiredMixin, UpdateView):
-
-    def get_success_url(self):
-        return reverse_lazy('blog:post_detail',
-                            kwargs={'post_id': self.object.pk})
 
 
 class PostDeleteView(CommonPostMixin, LoginRequiredMixin, DeleteView):
