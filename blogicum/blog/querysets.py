@@ -8,7 +8,12 @@ from .models import Post, Category
 from core.constants import POSTS_TO_DISPLAY
 
 
-def get_posts_in_category(slug):
+def paginate(post_list, page_number, posts_to_display):
+    paginator = Paginator(post_list, posts_to_display)
+    return paginator.get_page(page_number)
+
+
+def get_posts_in_category(slug, page_number=1):
     category = get_object_or_404(Category, slug=slug, is_published=True)
     post_list = Post.objects.filter(
         category=category,
@@ -20,8 +25,7 @@ def get_posts_in_category(slug):
         'category',
     ).order_by('-pub_date')
 
-    paginator = Paginator(post_list, POSTS_TO_DISPLAY)
-    posts = paginator.page(paginator.num_pages)
+    posts = paginate(post_list, page_number, POSTS_TO_DISPLAY)
 
     return posts, category
 

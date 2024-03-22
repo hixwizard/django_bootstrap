@@ -14,7 +14,8 @@ from .forms import CommentForm, PostForm, UserEditForm
 from .models import Post
 from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
 from .querysets import (
-    get_annotated_posts, filter_published_posts, get_posts_in_category
+    get_annotated_posts, filter_published_posts,
+    get_posts_in_category, paginate
 )
 
 
@@ -51,7 +52,7 @@ def index(request) -> HttpResponse:
     """Отображение главной страницы."""
     template = 'blog/index.html'
 
-    page_obj = Post.objects.filter(
+    post_list = Post.objects.filter(
         pub_date__lte=timezone.now(),
         is_published=True,
         category__is_published=True
@@ -61,13 +62,14 @@ def index(request) -> HttpResponse:
         'category'
     ).annotate(comment_count=Count('comments')).order_by(
         '-pub_date'
-    )[:POSTS_TO_DISPLAY]
+    )
+
+    page_number = request.GET.get('page', 1)
+    page_obj = paginate(post_list, page_number, POSTS_TO_DISPLAY)
+
     context = {
         'page_obj': page_obj,
     }
-    paginator = Paginator(page_obj, POSTS_TO_DISPLAY)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.page(page_number)
 
     return render(request, template, context)
 
