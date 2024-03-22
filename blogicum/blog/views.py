@@ -1,7 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.core.paginator import Paginator
 from django.db.models import Count, Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -9,13 +8,13 @@ from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.generic import DeleteView, UpdateView, ListView
 
-from core.constants import POSTS_TO_DISPLAY
+from core.constants import POSTS_TO_DISPLAY, START_PAGE_NUM
 from .forms import CommentForm, PostForm, UserEditForm
-from .models import Post
+from .models import Post, Category
 from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
 from .querysets import (
     get_annotated_posts, filter_published_posts,
-    get_posts_in_category, paginate
+    filter_posts_by_category, paginate
 )
 
 
@@ -64,7 +63,7 @@ def index(request) -> HttpResponse:
         '-pub_date'
     )
 
-    page_number = request.GET.get('page', 1)
+    page_number = request.GET.get('page', START_PAGE_NUM)
     page_obj = paginate(post_list, page_number, POSTS_TO_DISPLAY)
 
     context = {
@@ -78,7 +77,14 @@ def category_detail(request, slug) -> HttpResponse:
     """Отображение страницы с информацией о категории."""
     template = 'blog/category.html'
 
-    posts, category = get_posts_in_category(slug)
+    category = get_object_or_404(Category, slug=slug, is_published=True)
+
+    post_list = filter_posts_by_category(Post.objects.all(), slug)
+
+    page_number = request.GET.get('page', START_PAGE_NUM)
+
+    posts = paginate(post_list, page_number, POSTS_TO_DISPLAY)
+
     comment_form = CommentForm()
 
     context = {
