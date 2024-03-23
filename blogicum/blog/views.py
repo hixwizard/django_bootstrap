@@ -1,20 +1,20 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.utils import timezone
 from django.views.generic import DeleteView, UpdateView, ListView
 
-from core.constants import POSTS_TO_DISPLAY, START_PAGE_NUM
+from core.constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, PostForm, UserEditForm
 from .models import Post, Category
 from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
 from .querysets import (
     get_annotated_posts, filter_published_posts,
-    filter_posts_by_category, paginate
+    filter_posts_by_category, paginate, filter_posts
 )
 
 
@@ -50,21 +50,8 @@ def index(request) -> HttpResponse:
     """Отображение главной страницы."""
     template = 'blog/index.html'
 
-    post_list = Post.objects.filter(
-        pub_date__lte=timezone.now(),
-        is_published=True,
-        category__is_published=True
-    ).select_related(
-        'author',
-        'location',
-        'category'
-    ).annotate(comment_count=Count('comments')).order_by(
-        '-pub_date'
-    )
-
-    page_number = request.GET.get('page', START_PAGE_NUM)
-    page_obj = paginate(post_list, page_number, POSTS_TO_DISPLAY)
-
+    post_list = filter_posts(Post.objects.all())
+    page_obj = paginate(post_list, request, POSTS_TO_DISPLAY)
     context = {
         'page_obj': page_obj,
     }
@@ -79,11 +66,7 @@ def category_detail(request, slug) -> HttpResponse:
     category = get_object_or_404(Category, slug=slug, is_published=True)
 
     post_list = filter_posts_by_category(Post.objects.all(), slug)
-
-    page_number = request.GET.get('page', START_PAGE_NUM)
-
-    posts = paginate(post_list, page_number, POSTS_TO_DISPLAY)
-
+    posts = paginate(post_list, request, POSTS_TO_DISPLAY)
     comment_form = CommentForm()
 
     context = {

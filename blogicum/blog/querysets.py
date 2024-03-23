@@ -2,11 +2,25 @@ from django.core.paginator import Paginator
 from django.db.models import Count
 from django.utils import timezone
 from django.utils.timezone import now
+from core.constants import START_PAGE_NUM
 
 
-def paginate(post_list, page_number, posts_to_display):
+def paginate(post_list, request, posts_to_display):
+    page_number = request.GET.get('page', START_PAGE_NUM)
     paginator = Paginator(post_list, posts_to_display)
     return paginator.get_page(page_number)
+
+
+def filter_posts(queryset):
+    return queryset.filter(
+        pub_date__lte=timezone.now(),
+        is_published=True,
+        category__is_published=True
+    ).select_related(
+        'author',
+        'location',
+        'category'
+    ).annotate(comment_count=Count('comments')).order_by('-pub_date')
 
 
 def filter_posts_by_category(queryset, category_slug):
