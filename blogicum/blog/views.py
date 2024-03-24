@@ -11,10 +11,11 @@ from django.views.generic import DeleteView, UpdateView, ListView
 from core.constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, PostForm, UserEditForm
 from .models import Post, Category
-from .mixins import PostFormMixin, CommentMixin, CommonPostMixin
+from .mixins import PostFormMixin, CommentMixin
+from .pagitane import paginate
 from .querysets import (
     get_annotated_posts, filter_published_posts,
-    filter_posts_by_category, paginate, filter_posts
+    filter_posts_by_category, filter_posts
 )
 
 
@@ -166,8 +167,16 @@ class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
     pass
 
 
-class PostDeleteView(CommonPostMixin, LoginRequiredMixin, DeleteView):
+class PostDeleteView(LoginRequiredMixin, DeleteView):
     success_url = reverse_lazy('blog:index')
+
+    def dispatch(self, request, *args, **kwargs):
+        instance = get_object_or_404(
+            self.model, pk=kwargs.get(self.pk_url_kwarg)
+        )
+        if instance.author != request.user:
+            return redirect('blog:post_detail', post_id=instance.pk)
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
