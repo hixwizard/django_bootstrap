@@ -13,13 +13,12 @@ from .forms import CommentForm, PostForm, UserEditForm
 from .models import Post, Category
 from .mixins import PostFormMixin, CommentMixin
 from .pagitane import paginate
-from .querysets import (
-    get_annotated_posts, filter_published_posts,
-    filter_posts_by_category, filter_posts
-)
+from .querysets import filter_posts
 
 
 class ProfileView(ListView):
+    """Отображение страницы профиля."""
+
     model = User
     template_name = 'blog/profile.html'
     context_object_name = 'profile'
@@ -29,16 +28,15 @@ class ProfileView(ListView):
     def get_author(self):
         if not self.author:
             self.author = get_object_or_404(
-                User,
-                username=self.kwargs['username']
+                User, username=self.kwargs['username']
             )
         return self.author
 
     def get_queryset(self):
         author = self.get_author()
-        posts = get_annotated_posts(author)
+        posts = author.posts.all().order_by('-pub_date')
         if author != self.request.user:
-            posts = filter_published_posts(posts)
+            posts = filter_posts(posts)
         return posts
 
     def get_context_data(self, **kwargs):
@@ -50,8 +48,7 @@ class ProfileView(ListView):
 def index(request) -> HttpResponse:
     """Отображение главной страницы."""
     template = 'blog/index.html'
-
-    post_list = filter_posts(Post.objects.all())
+    post_list = filter_posts(Post.objects.all(), published_only=True)
     page_obj = paginate(post_list, request, POSTS_TO_DISPLAY)
     context = {
         'page_obj': page_obj,
@@ -65,8 +62,9 @@ def category_detail(request, slug) -> HttpResponse:
     template = 'blog/category.html'
 
     category = get_object_or_404(Category, slug=slug, is_published=True)
-
-    post_list = filter_posts_by_category(Post.objects.all(), slug)
+    post_list = filter_posts(
+        Post.objects.all(), category_slug=slug, published_only=True
+    )
     posts = paginate(post_list, request, POSTS_TO_DISPLAY)
     comment_form = CommentForm()
 
@@ -106,6 +104,7 @@ def post_detail(request, post_id) -> HttpResponse:
 
 @login_required
 def post_create(request):
+    """Отображение страницы создания профиля."""
     template_name = 'blog/create.html'
     form = PostForm(request.POST or None, files=request.FILES or None)
     if form.is_valid():
@@ -117,6 +116,8 @@ def post_create(request):
 
 
 class EditPostView(PostFormMixin, LoginRequiredMixin, UpdateView):
+    """Отображение страницы редактирования поста."""
+
     pk_url_kwarg = 'post_id'
 
     def get_success_url(self):
@@ -127,10 +128,14 @@ class EditPostView(PostFormMixin, LoginRequiredMixin, UpdateView):
 
 
 class DeletePostView(PostFormMixin, DeleteView):
+    """Отображение страницы удаления профиля."""
+
     success_url = reverse_lazy('blog:index')
 
 
-class ProfiletUpdateView(LoginRequiredMixin, UpdateView):
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    """Отображение страницы редактирования профиля."""
+
     form_class = UserEditForm
     template_name = 'blog/user.html'
 
@@ -149,6 +154,7 @@ class ProfiletUpdateView(LoginRequiredMixin, UpdateView):
 
 @login_required
 def add_comment(request, post_id) -> HttpResponse:
+    """Отображение страницы комметария."""
     comment = get_object_or_404(Post, pk=post_id)
     form = CommentForm(request.POST)
     if form.is_valid():
@@ -160,14 +166,20 @@ def add_comment(request, post_id) -> HttpResponse:
 
 
 class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
+    """Отображение страницы редактирования комметария."""
+
     pass
 
 
 class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
+    """Отображение страницы удаления комметария."""
+
     pass
 
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
+    """Отображение страницы удаления поста."""
+
     success_url = reverse_lazy('blog:index')
 
     def dispatch(self, request, *args, **kwargs):

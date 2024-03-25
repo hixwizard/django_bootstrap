@@ -43,7 +43,9 @@ class PostAdmin(admin.ModelAdmin):
 
 
 class CommentAdmin(admin.ModelAdmin):
-    list_display = (
+    """Административная панель для управления Комментариями."""
+
+    list_display: List[str] = (
         'text',
         'post',
         'created_at',

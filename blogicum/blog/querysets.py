@@ -1,41 +1,29 @@
 from django.db.models import Count
 from django.utils import timezone
-from django.utils.timezone import now
 
 
-def filter_posts(queryset):
-    return queryset.filter(
-        pub_date__lte=timezone.now(),
-        is_published=True,
-        category__is_published=True
-    ).select_related(
-        'author',
-        'location',
-        'category'
-    ).annotate(comment_count=Count('comments')).order_by('-pub_date')
-
-
-def filter_posts_by_category(queryset, category_slug):
-    return queryset.filter(
-        category__slug=category_slug,
-        pub_date__lte=timezone.now(),
-        is_published=True
-    ).select_related(
-        'author',
-        'location',
-        'category',
-    ).order_by('-pub_date')
-
-
-def get_annotated_posts(queryset):
-    return queryset.posts.annotate(
+def filter_posts(
+        queryset,
+        category_slug=None,
+        author=None,
+        published_only=False
+):
+    """Универсальный метод фильтрации."""
+    filters = {
+        'is_published': True,
+        'category__is_published': True,
+        'pub_date__lte': timezone.now()
+    }
+    if category_slug is not None:
+        filters['category__slug'] = category_slug
+    if author is not None:
+        filters['author'] = author
+    if published_only:
+        queryset = queryset.filter(**filters)
+    return queryset.annotate(
         comment_count=Count('comments')
-    ).order_by('-pub_date').select_related('category', 'author', 'location')
-
-
-def filter_published_posts(queryset):
-    return queryset.filter(
-        is_published=True,
-        category__is_published=True,
-        pub_date__lte=now()
+    ).order_by(
+        '-pub_date'
+    ).select_related(
+        'category', 'author', 'location'
     )
