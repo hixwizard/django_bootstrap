@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy, reverse
 from django.views.generic import DeleteView, UpdateView, ListView
 from django.utils import timezone
-from django.db.models import Count
 
 from core.constants import POSTS_TO_DISPLAY
 from .forms import CommentForm, PostForm, UserEditForm
@@ -35,12 +34,10 @@ class ProfileView(ListView):
 
     def get_queryset(self):
         author = self.get_author()
-        posts = author.posts.all().annotate(
-            comment_count=Count('comments')
-        ).order_by('-pub_date')
+        posts = author.posts.all()
         if author != self.request.user:
             posts = publication_filters(posts)
-        return posts
+        return annotation_and_selects(posts)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -51,8 +48,10 @@ class ProfileView(ListView):
 def index(request) -> HttpResponse:
     """Отображение главной страницы."""
     template = 'blog/index.html'
-    post_list = publication_filters(Post.objects.all(), published_only=True)
-    post_list = annotation_and_selects(post_list)
+    post_list = annotation_and_selects(publication_filters(Post.objects.all()))
+    unpublished_categories = Category.objects.filter(is_published=False)
+    post_list = post_list.exclude(category__in=unpublished_categories)
+
     page_obj = paginate(post_list, request, POSTS_TO_DISPLAY)
     context = {
         'page_obj': page_obj,
@@ -64,11 +63,9 @@ def index(request) -> HttpResponse:
 def category_detail(request, slug) -> HttpResponse:
     """Отображение страницы с информацией о категории."""
     template = 'blog/category.html'
-
     category = get_object_or_404(Category, slug=slug, is_published=True)
-    post_list = publication_filters(
-        Post.objects.all(), category_slug=slug, published_only=True
-    )
+    post_list = Post.objects.filter(category__slug=slug)
+    post_list = publication_filters(post_list)
     post_list = annotation_and_selects(post_list)
     posts = paginate(post_list, request, POSTS_TO_DISPLAY)
     comment_form = CommentForm()
@@ -95,7 +92,7 @@ def post_detail(request, post_id) -> HttpResponse:
         'location',
         'category'
     )
-    post = get_object_or_404(annotation_and_selects(queryset))
+    post = get_object_or_404(queryset)
 
     context = {
         'post': post,
@@ -178,7 +175,7 @@ class CommentUpdateView(LoginRequiredMixin, CommentMixin, UpdateView):
 class CommentDeleteView(LoginRequiredMixin, CommentMixin, DeleteView):
     """Отображение страницы удаления комметария."""
 
-    pass
+    success_url = reverse_lazy('blog:index')
 
 
 class PostDeleteView(LoginRequiredMixin, DeleteView):
